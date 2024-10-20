@@ -10,9 +10,6 @@ terraform {
 provider "aws" {
   region = "us-east-1"
   
-  # Claves definidas en GitHub Actions
-  access_key = var.access_key
-  secret_key = var.secret_key
 }
 
 # Recurso: Rol para la función Lambda
