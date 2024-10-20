@@ -9,14 +9,19 @@ terraform {
 }
 
 provider "aws" {
-  profile    = "default"
-  region = "us-east-1"
-  
+  profile = "default"
+  region  = "us-east-1"
+}
+
+# Generar un sufijo aleatorio para evitar conflictos de nombre
+resource "random_string" "suffix" {
+  length  = 8
+  special = false
 }
 
 # Recurso: Rol para la función Lambda
 resource "aws_iam_role" "lambda_role" {
-  name = "lambda-execution-role"
+  name = "lambda-execution-role-${random_string.suffix.result}"  # Nombre único del rol
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
