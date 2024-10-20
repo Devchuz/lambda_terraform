@@ -75,7 +75,7 @@ resource "aws_lambda_function" "example" {
 
   function_name = "lambda_function_${each.key}"
   role          = aws_iam_role.lambda_role.arn
-  handler       = "lambda_function.handler"  # Nombre del archivo y la función 'handler'
+  handler       = "lambda_function.lambda_handler"  # Nombre del archivo y la función 'handler'
   runtime       = "python3.9"                # Runtime de Python 3.9
 
   filename         = "lambda_function.zip"  # Ruta al archivo .zip con el código de la Lambda
