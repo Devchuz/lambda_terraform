@@ -1,0 +1,55 @@
+name: Terraform Cleanup and Lambda Upload
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # Ejecuta todos los días a medianoche (ajusta según lo necesario)
+
+jobs:
+  terraform-cleanup:
+    name: 'Post Apply Cleanup and Lambda Upload'
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: 'us-east-1'
+      TF_VERSION: '1.4.0'
+
+    steps:
+    - name: 'Checkout GitHub repository'
+      uses: actions/checkout@v2  # Clona el código del repositorio
+
+    - name: 'Configure AWS credentials'
+      uses: aws-actions/configure-aws-credentials@v1  # Configura las credenciales de AWS
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: 'Set up Terraform'
+      uses: hashicorp/setup-terraform@v1  # Configura Terraform
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: 'Install dependencies from requirements.txt'
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r src/requirements.txt --target lambda_layer/python  # Instalar los requirements en la capa Lambda
+
+    - name: 'Zip dependencies'
+      run: |
+        cd lambda_layer
+        zip -r ../lambda_layer.zip .  # Crear un zip de la capa Lambda con las dependencias
+
+    - name: 'Zip lambda_function.py'
+      run: |
+        cd src
+        zip -r ../lambda_function.zip lambda_function.py  # Crear un zip del código de la función Lambda
+
+    - name: 'Terraform Init'
+      run: terraform init  # Inicializar Terraform
+
+    - name: 'Terraform Plan Destroy'
+      run: terraform plan -destroy -out=tfplan-destroy  # Genera el plan para destruir la infraestructura
+
+    - name: 'Terraform Apply Destroy'
+      run: terraform apply -auto-approve tfplan-destroy  # Aplica el plan de destrucción de Terraform

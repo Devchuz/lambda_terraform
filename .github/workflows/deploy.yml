@@ -1,0 +1,73 @@
+name: Terraform CI/CD
+
+on:
+  push:
+    branches:
+      - main  # Ejecuta el pipeline en cada push a la rama main
+  pull_request:
+    branches:
+      - main  # Ejecuta el pipeline en cada pull request hacia la rama main
+
+jobs:
+  terraform:
+    name: 'Terraform Lint, Security Check, and Deploy'
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: 'us-east-1'
+      TF_VERSION: '1.4.0'
+      TFLINT_VERSION: '0.46.1'  # Actualizado a una versión más reciente
+      TFSEC_VERSION: '1.28.1'   # Actualizado a una versión más reciente
+
+    steps:
+    - name: 'Checkout GitHub repository'
+      uses: actions/checkout@v2  # Clona el repositorio en la máquina de CI
+
+    - name: 'Configure AWS credentials'
+      uses: aws-actions/configure-aws-credentials@v1  # Configura las credenciales de AWS para autenticación
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: 'Set up Terraform'
+      uses: hashicorp/setup-terraform@v1  # Configura Terraform
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: 'Install TFLint'
+      run: |
+        curl -sLo tflint.zip https://github.com/terraform-linters/tflint/releases/download/v${{ env.TFLINT_VERSION }}/tflint_linux_amd64.zip
+        unzip tflint.zip -d /usr/local/bin/
+        tflint --version  # Verifica la instalación de TFLint
+
+    - name: 'Install tfsec'
+      run: |
+        curl -sLo tfsec https://github.com/aquasecurity/tfsec/releases/download/v${{ env.TFSEC_VERSION }}/tfsec-linux-amd64
+        chmod +x tfsec
+        mv tfsec /usr/local/bin/
+        tfsec --version  # Verifica la instalación de tfsec
+
+    - name: 'Terraform Init'
+      run: terraform init  # Inicializa Terraform
+
+    - name: 'Terraform Format'
+      run: terraform fmt  # Formatea los archivos de Terraform
+
+    - name: 'Terraform Validate'
+      run: terraform validate  # Valida los archivos de Terraform
+
+    - name: 'TFLint'
+      run: |
+        tflint --init  # Inicializa las reglas de linting de TFLint
+        tflint  # Ejecuta el linting
+
+    - name: 'tfsec'
+      run: tfsec .  # Ejecuta tfsec para analizar vulnerabilidades de seguridad en Terraform
+
+    - name: 'Terraform Plan'
+      run: terraform plan -out=tfplan  # Genera el plan de Terraform
+
+    - name: 'Terraform Apply'
+      if: github.ref == 'refs/heads/main'  # Solo aplica el plan si es en la rama main
+      run: terraform apply -auto-approve tfplan  # Aplica los cambios de Terraform
