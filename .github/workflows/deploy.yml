@@ -10,7 +10,7 @@ on:
 
 jobs:
   terraform:
-    name: 'Terraform Lint, Security Check, and Deploy'
+    name: 'Terraform Lint, Security Check, Lambda Upload, and Deploy'
     runs-on: ubuntu-latest
 
     env:
@@ -29,6 +29,26 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
+
+    - name: 'Set up Python for Lambda dependencies'
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: 'Install dependencies from requirements.txt'
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r src/requirements.txt --target lambda_layer/python  # Instalar las dependencias de Lambda
+
+    - name: 'Zip dependencies'
+      run: |
+        cd lambda_layer
+        zip -r ../lambda_layer.zip .  # Crear archivo ZIP de las dependencias para la Lambda
+
+    - name: 'Zip lambda_function.py'
+      run: |
+        cd src
+        zip -r ../lambda_function.zip lambda_function.py  # Crear archivo ZIP del código de Lambda
 
     - name: 'Set up Terraform'
       uses: hashicorp/setup-terraform@v1  # Configura Terraform
