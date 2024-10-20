@@ -8,15 +8,11 @@ terraform {
 }
 
 provider "aws" {
-  region     = var.region
-}
-
-# Variables locales para la ruta del archivo requirements.txt y el directorio de librerías
-locals {
-  lambda_layer_root             = "${path.module}/lambda_layer"          # Directorio raíz de la capa
-  lambda_runtime                = "python3.9"
-  lambda_function_name          = "my_lambda_function"
-  extra_tag                     = "extra-tag"
+  region = "us-east-1"
+  
+  # Claves definidas en GitHub Actions
+  access_key = var.access_key
+  secret_key = var.secret_key
 }
 
 # Recurso: Rol para la función Lambda
@@ -37,58 +33,47 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
+# Adjuntar la política de logs para la función Lambda
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Recurso: Archivar la capa Lambda
-data "archive_file" "lambda_layer" {
-  type        = "zip"
-  source_dir  = local.lambda_layer_root   # Directorio de la capa
-  output_path = "${path.module}/lambda_layer.zip"
-}
+# Recurso: Capa Lambda para las dependencias
+resource "aws_lambda_layer_version" "lambda_layer" {
+  filename   = "lambda_layer.zip"
+  layer_name = "lambda_layer"
+  compatible_runtimes = ["python3.9"]
 
-# Recurso: Crear la versión de la capa Lambda con las dependencias
-resource "aws_lambda_layer_version" "layer" {
-  layer_name          = "${local.lambda_function_name}-pip-requirements"
-  filename            = data.archive_file.lambda_layer.output_path
-  source_code_hash    = data.archive_file.lambda_layer.output_base64sha256
-  compatible_runtimes = [local.lambda_runtime]
-
-  lifecycle {
-    create_before_destroy = true
-  }
+  source_code_hash = filebase64sha256("lambda_layer.zip")  # Hash del archivo de dependencias
 }
 
 # Recurso: Función Lambda
 resource "aws_lambda_function" "example" {
-  for_each = var.service_names
+  for_each = var.service_names  # Itera sobre los nombres de servicios definidos
 
   function_name = "lambda_function_${each.key}"
   role          = aws_iam_role.lambda_role.arn
-  handler       = "lambda_function.lambda_handler"
-  runtime       = local.lambda_runtime
+  handler       = "lambda_function.handler"  # Nombre del archivo y la función 'handler'
+  runtime       = "python3.9"                # Runtime de Python 3.9
 
-  filename         = "src/lambda_function.zip"
-  source_code_hash = filebase64sha256("src/lambda_function.zip")
+  filename         = "lambda_function.zip"  # Ruta al archivo .zip con el código de la Lambda
+  source_code_hash = filebase64sha256("lambda_function.zip")  # Hash del archivo .zip
 
-  # Vincular la función Lambda con la capa recién creada
-  layers = [
-    aws_lambda_layer_version.layer.arn
-  ]
+  # Referencia a la capa de Lambda que contiene las dependencias
+  layers = [aws_lambda_layer_version.lambda_layer.arn]
 
+  # Etiquetas básicas para la función
   tags = {
-    ExtraTag = local.extra_tag
-    Name     = "Lambda-${each.key}"
+    Name        = "Lambda-${each.key}"
+    Environment = "test"
   }
 
+  # Variables de entorno (puedes ajustar o añadir más si es necesario)
   environment {
     variables = {
       ENVIRONMENT = "test"
       SERVICE     = each.key
     }
   }
-
-  depends_on = [aws_lambda_layer_version.layer]
 }
