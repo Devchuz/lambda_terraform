@@ -5,7 +5,7 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 3.0"
     }
-    random = {  # Añadir el proveedor random
+    random = {  # Proveedor random añadido
       source  = "hashicorp/random"
       version = "~> 3.0"
     }
@@ -15,6 +15,19 @@ terraform {
 provider "aws" {
   profile = "default"
   region  = "us-east-1"
+}
+
+# Variable para los nombres de los servicios
+variable "service_names" {
+  description = "A map of service names to deploy"
+  type        = map(string)
+}
+
+# Asignación de valores a la variable service_names
+locals {
+  service_names = {
+    "name" = "example"
+  }
 }
 
 # Generar un sufijo aleatorio para evitar conflictos de nombre
@@ -62,7 +75,7 @@ resource "aws_lambda_layer_version" "lambda_layer" {
 
 # Recurso: Función Lambda
 resource "aws_lambda_function" "example" {
-  for_each = var.service_names  # Itera sobre los nombres de servicios definidos
+  for_each = local.service_names  # Itera sobre los nombres de servicios definidos
 
   function_name = "lambda_function_${each.key}"
   role          = aws_iam_role.lambda_role.arn
