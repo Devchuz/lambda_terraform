@@ -84,10 +84,6 @@ jobs:
 
     - name: 'tfsec'
       run: tfsec .  # Ejecuta tfsec para analizar vulnerabilidades de seguridad en Terraform
-
-    - name: 'Terraform Plan'
-      run: terraform plan -out=tfplan  # Genera el plan de Terraform
-
+      
     - name: 'Terraform Apply'
-      if: github.ref == 'refs/heads/main'  # Solo aplica el plan si es en la rama main
       run: terraform apply -auto-approve tfplan  # Aplica los cambios de Terraform
