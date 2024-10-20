@@ -76,13 +76,18 @@ resource "aws_lambda_function" "example" {
   function_name = "lambda_function_${each.key}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "lambda_function.lambda_handler"  # Nombre del archivo y la función 'handler'
-  runtime       = "python3.9"                # Runtime de Python 3.9
+  runtime       = "python3.9"                       # Runtime de Python 3.9
 
   filename         = "lambda_function.zip"  # Ruta al archivo .zip con el código de la Lambda
   source_code_hash = filebase64sha256("lambda_function.zip")  # Hash del archivo .zip
 
   # Referencia a la capa de Lambda que contiene las dependencias
   layers = [aws_lambda_layer_version.lambda_layer.arn]
+
+  # Habilitar X-Ray Tracing
+  tracing_config {
+    mode = "Active"  # Habilita el tracing para la función Lambda
+  }
 
   # Etiquetas básicas para la función
   tags = {
@@ -98,3 +103,4 @@ resource "aws_lambda_function" "example" {
     }
   }
 }
+
