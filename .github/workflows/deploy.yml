@@ -84,6 +84,6 @@ jobs:
 
     - name: 'tfsec'
       run: tfsec .  # Ejecuta tfsec para analizar vulnerabilidades de seguridad en Terraform
-      
+
     - name: 'Terraform Apply'
-      run: terraform apply -auto-approve tfplan  # Aplica los cambios de Terraform
+      run: terraform apply -auto-approve  # Aplica los cambios de Terraform
