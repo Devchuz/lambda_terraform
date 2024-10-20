@@ -30,6 +30,10 @@ resource "aws_iam_role" "lambda_role" {
       }
     ]
   })
+
+  lifecycle {
+    prevent_destroy = true  # Evita destruir el recurso si ya existe
+  }
 }
 
 # Adjuntar la política de logs para la función Lambda
