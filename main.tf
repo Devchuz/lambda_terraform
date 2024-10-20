@@ -21,6 +21,9 @@ provider "aws" {
 variable "service_names" {
   description = "A map of service names to deploy"
   type        = map(string)
+  default     = {
+    "service1" = "example"
+  }
 }
 
 # Generar un sufijo aleatorio para evitar conflictos de nombre
@@ -68,7 +71,7 @@ resource "aws_lambda_layer_version" "lambda_layer" {
 
 # Recurso: Función Lambda
 resource "aws_lambda_function" "example" {
-  for_each = var.service_names  # Usa la variable service_names directamente
+  for_each = var.service_names  # Itera sobre los nombres de servicios
 
   function_name = "lambda_function_${each.key}"
   role          = aws_iam_role.lambda_role.arn
